@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<head>
+  <title>Stocks with Friends</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+  <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css" rel="stylesheet">
+  <style>
+
+  body {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizelegibility;
+  }
+
+  .stocks {
+    padding: 10px 15px;
+    margin: 5px;
+    border: 1px solid black;
+  }
+
+  .fa-trash {
+    color: gray;
+  }
+
+  .fa-trash:hover {
+    cursor: pointer;
+    color: blue;
+  }
+
+  .axis {
+    font: 10px sans-serif;
+  }
+
+  .axis path,
+  .axis line {
+    fill: none;
+    stroke: white;
+    shape-rendering: crispEdges;
+  }
+
+  text {
+    color: white;
+  }
+
+  .well {
+    background-color: rgba(0,0,0,0.5);
+    padding: 5px;
+    font-size: 16px;
+  }
+
+  p:hover {
+    cursor: pointer;
+  }
+
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="row">
+      <div class="col-md-12">
+        <h1 class="text-center">Stocks With Friends</h1>
+      </div>
+    </div>
+    <div class="row">
+      <svg width="960" height="500"></svg>
+      <div id="stock-panel"></div>
+    </div>
+    <div class="row">
+      <div class="col-md-6">
+        <span class="lead pull-right">Enter Stock Symbol : e.g. AAPL (Apple)</span>
+      </div>
+      <div class="col-md-6">
+        <form id="symbol" style="display:inline;">
+          <input name="symbol" type="text" id="symbol-input">
+          <input type="submit" value="Go" class="btn btn-default">
+        </form>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-12">
+        <span><strong>Project by :</strong> by <a href="https://mike.cabelin.com">Neptune Michael Cabelin</a> ---
+        <strong>Github repository found at : </strong><a href="https://github.com/ncabelin/stocks-with-friends.git">https://github.com/ncabelin/stocks-with-friends.git</a></span>
+      </div>
+    </div>
+  </div>
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="/js/keys.js"></script>
+<script>
+// 516K67JS8ER6OPCG
+$(document).ready(function() {
+  var socket = io();
+  socket.on('add stock', function(stck) {
+    addStock(stck);
+  });
+
+  var colors = ['steelblue','red','orange', 'yellow', 'green', 'purple', 'black', 'violet'],
+      symbols = [],
+      first = true,
+      stock_data = [];
+
+  // form submit handler
+  $('#symbol').submit(function(e) {
+    e.preventDefault();
+    // get symbol value
+    var sym = $('#symbol-input').val().toUpperCase();
+    socket.emit('add stock', sym);
+    addStock(sym);
+  });
+
+  function addStock(sym) {
+    var color;
+
+    // empty input
+    $('#symbol-input').val('');
+
+    // check if symbol already exists
+    var index = symbols.indexOf(sym);
+    if (index === -1) {
+      var i = symbols.length;
+      symbols.push(sym);
+      color = colors[i % 7];
+    } else {
+      // symbol exists already
+      return;
+    }
+
+    getStockData(sym).done(function(result) {
+      $('#stock-panel').append('<span class="stocks" data-id="' + sym + '">' + sym + ' &nbsp;&nbsp; <i class="fa fa-trash" data-id="' + sym + '"></i></span>');
+      $('.fa-trash').click(function() {
+        var symbol = $(this).data('id');
+        removeStock(symbol);
+      });
+
+      renderChart(convertStocks(result), color, first, sym);
+      first = false;
+    }).fail(function(err) {
+      alert('Failed to get data');
+    });
+  }
+
+  function removeStock(symbol) {
+    // remove line
+    d3.select('#' + symbol).remove();
+    // remove from symbols array
+    var index = symbols.indexOf(symbol);
+    symbols.splice(index, 1);
+    // remove DOM element
+    $('span[data-id="' + symbol + '"]').remove();
+  }
+
+  function getStockData(symbol) {
+    return $.ajax({
+      type: 'GET',
+      url: 'https://www.alphavantage.co/query?function=TIME_SERIES_MONTHLY&symbol=' + symbol + '&apikey=' + api_key
+    });
+  }
+
+  function convertStocks(obj) {
+    // convert object data to array of date and close
+    var data = obj['Monthly Time Series'];
+    var arr = [];
+    for (k in data) {
+      if (data.hasOwnProperty(k)) {
+        arr.push({
+          date: k,
+          close: data[k]['4. close']
+        });
+      }
+    }
+    return arr
+  }
+
+  // getStockData('AAPL').done(function(result) {
+  //   console.log(result);
+  //   renderChart(convertStocks(result), colors[0], true);
+  // }).fail(function(error) {
+  //   alert('Failed to get data');
+  // });
+
+  function renderChart(data, c, first, symbol) {
+    var svg = d3.select("svg"),
+    margin = {top: 20, right: 20, bottom: 30, left: 50},
+    width = +svg.attr("width") - margin.left - margin.right,
+    height = +svg.attr("height") - margin.top - margin.bottom,
+    g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    var x = d3.scaleTime()
+        .range([0, width]);
+
+    var y = d3.scaleLinear()
+        .range([height, 0]);
+
+    var line = d3.line()
+        .x(function(d) { 
+          return x(d.date); })
+        .y(function(d) { 
+          return y(d.close); });
+
+    data.forEach(function(d) {
+        var d_arr = d.date.split('-');
+        d.date = new Date(d_arr[1] + '/' + d_arr[2] + '/' + d_arr[0]);
+        d.close = +d.close;
+    });
+
+    x.domain(d3.extent(data, function(d) { return d.date; }));
+    y.domain(d3.extent(data, function(d) { return d.close; }));
+    
+    if (first) {
+      g.append("g")
+        .attr("transform", "translate(0," + height + ")")
+        .call(d3.axisBottom(x))
+      .select(".domain")
+        .remove();
+
+      g.append("g")
+          .call(d3.axisLeft(y))
+        .append("text")
+          .attr("fill", "#000")
+          .attr("transform", "rotate(-90)")
+          .attr("y", 6)
+          .attr("dy", "0.71em")
+          .attr("text-anchor", "end")
+          .text("Price ($)");
+    }
+
+    g.append("path")
+        .datum(data)
+        .attr("id", symbol)
+        .attr("fill", "none")
+        .attr("stroke", c)
+        .attr("stroke-linejoin", "round")
+        .attr("stroke-linecap", "round")
+        .attr("stroke-width", 1.5)
+        .attr("d", line);
+
+  }
+});
+
+</script>
+</body>
