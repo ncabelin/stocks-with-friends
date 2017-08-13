@@ -4,11 +4,23 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+  <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css" rel="stylesheet">
   <style>
 
   body {
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizelegibility;
+  }
+
+  .stocks {
+    padding: 10px;
+    margin: 5px;
+    border: 1px solid black;
+  }
+
+  .fa-times:hover {
+    cursor: pointer;
+    color: blue;
   }
 
   .axis {
@@ -44,14 +56,25 @@
     <div class="row">
       <div class="col-md-12">
         <h1 class="text-center">Stocks With Friends</h1>
-        <p class="lead text-center">Enter Stock Symbol : e.g. AAPL (Apple) 
-        <form id="symbol">
-          <input name="symbol" type="text" id="symbol-input" class="text-center">
+      </div>
+    </div>
+    <div class="row">
+      <svg width="960" height="500"></svg>
+      <div id="stock-panel"></div>
+    </div>
+    <div class="row">
+      <div class="col-md-6">
+        <span class="lead pull-right">Enter Stock Symbol : e.g. AAPL (Apple)</span>
+      </div>
+      <div class="col-md-6">
+        <form id="symbol" style="display:inline;">
+          <input name="symbol" type="text" id="symbol-input">
           <input type="submit" value="Go" class="btn btn-default">
         </form>
-        </p>
-        <svg width="960" height="500"></svg>
-        <p id="description"></p>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-12">
         <span><strong>Project by :</strong> by <a href="https://mike.cabelin.com">Neptune Michael Cabelin</a> ---
         <strong>Github repository found at : </strong><a href="https://github.com/ncabelin/stocks-with-friends.git">https://github.com/ncabelin/stocks-with-friends.git</a></span>
       </div>
@@ -64,16 +87,17 @@
 <script>
 // 516K67JS8ER6OPCG
 $(document).ready(function() {
-  var colors = ['steelblue','red','orange', 'yellow', 'green', 'purple'];
-  var symbols = [];
-  var stock_data = [];
+  var colors = ['steelblue','red','orange', 'yellow', 'green', 'purple'],
+      symbols = [],
+      first = true,
+      stock_data = [];
 
   // form submit handler
   $('#symbol').submit(function(e) {
     e.preventDefault();
     var color;
     // get symbol value
-    var sym = $('#symbol-input').val();
+    var sym = $('#symbol-input').val().toUpperCase();
     // empty input
     $('#symbol-input').val('');
 
@@ -84,18 +108,37 @@ $(document).ready(function() {
       symbols.push(sym);
       color = colors[i % 5];
     } else {
-      color = colors[index % 5];
+      // symbol exists already
+      return;
     }
 
     getStockData(sym).done(function(result) {
-      if (symbols.length > 0) {
-
-      }
-      renderChart(convertStocks(result), color, symbols);
+      $('#stock-panel').append('<span class="stocks" data-id="' + sym + '">' + sym + ' <i class="fa fa-times" data-id="' + sym + '"></i></span>');
+      $('.fa-times').click(function() {
+        var symbol = $(this).data('id');
+        removeStock(symbol);
+      });
+      
+      renderChart(convertStocks(result), color, first, sym);
+      first = false;
     }).fail(function(err) {
       alert('Failed to get data');
     });
   });
+
+  // delete stock handler
+
+  // document.getElementByClass('fa-times').addEventListener('click', )
+
+  function removeStock(symbol) {
+    // remove line
+    d3.select('#' + symbol).remove();
+    // remove from symbols array
+    var index = symbols.indexOf(symbol);
+    symbols.splice(index, 1);
+    // remove DOM element
+    $('span[data-id="' + symbol + '"]').remove();
+  }
 
   function getStockData(symbol) {
     return $.ajax({
@@ -126,7 +169,7 @@ $(document).ready(function() {
   //   alert('Failed to get data');
   // });
 
-  function renderChart(data, c, symbols) {
+  function renderChart(data, c, first, symbol) {
     var svg = d3.select("svg"),
     margin = {top: 20, right: 20, bottom: 30, left: 50},
     width = +svg.attr("width") - margin.left - margin.right,
@@ -174,6 +217,7 @@ $(document).ready(function() {
 
     g.append("path")
         .datum(data)
+        .attr("id", symbol)
         .attr("fill", "none")
         .attr("stroke", c)
         .attr("stroke-linejoin", "round")
