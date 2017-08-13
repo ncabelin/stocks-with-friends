@@ -87,19 +87,37 @@
 <script src="/socket.io/socket.io.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 <script src="https://d3js.org/d3.v4.min.js"></script>
-<!-- <script src="/js/keys.js"></script> -->
+<script src="/js/keys.js"></script>
 <script>
-// 516K67JS8ER6OPCG
 $(document).ready(function() {
   var socket = io();
   socket.on('add stock', function(stck) {
     addStock(stck);
   });
 
-  var colors = ['steelblue','red','orange', 'yellow', 'green', 'purple', 'black', 'violet'],
+  socket.on('remove stock', function(stck) {
+    console.log('socket removes ' + stck);
+    removeStock(stck);
+  });
+
+  var colors = ['steelblue','red','orange', 'yellow', 'green', 'purple', 'black', 'violet', 'brown', 'pink'],
+      available_colors = [],
       symbols = [],
       first = true,
       stock_data = [];
+
+  // check server for saved stocks
+  $.ajax({
+    type: 'GET',
+    url: '/list_stocks'
+  }).done(function(result) {
+    console.log(result);
+    result.forEach(function(s) {
+      addStock(s.name);
+    });
+  }).fail(function(err) {
+    console.log(err);
+  });
 
   // form submit handler
   $('#symbol').submit(function(e) {
@@ -121,16 +139,21 @@ $(document).ready(function() {
     if (index === -1) {
       var i = symbols.length;
       symbols.push(sym);
-      color = colors[i % 7];
+      color = colors[i];
     } else {
       // symbol exists already
+      alert('Stock symbol already exists');
       return;
     }
 
     getStockData(sym).done(function(result) {
-      $('#stock-panel').append('<span class="stocks" data-id="' + sym + '">' + sym + ' &nbsp;&nbsp; <i class="fa fa-trash" data-id="' + sym + '"></i></span>');
+      console.log(api_key);
+      $('#stock-panel').append('<span class="stocks" data-id="' + sym + '"><strong>' + sym + ' &nbsp;&nbsp;</strong> <i class="fa fa-trash" data-id="' + sym + '"></i></span>');
+      $('span[data-id=' + sym + ']').css('color', color);
       $('.fa-trash').click(function() {
         var symbol = $(this).data('id');
+        // remove stock from database
+        socket.emit('remove stock', symbol);
         removeStock(symbol);
       });
 
@@ -142,13 +165,18 @@ $(document).ready(function() {
   }
 
   function removeStock(symbol) {
-    // remove line
-    d3.select('#' + symbol).remove();
     // remove from symbols array
-    var index = symbols.indexOf(symbol);
-    symbols.splice(index, 1);
-    // remove DOM element
-    $('span[data-id="' + symbol + '"]').remove();
+    var symbol_index = symbols.indexOf(symbol);
+    if (symbol_index !== -1) {
+      // remove line
+      d3.select('#' + symbol).remove();
+      // remove DOM element
+      $('span[data-id="' + symbol + '"]').remove();
+      // remove from symbols array
+      symbols.splice(symbol_index, 1);
+    } else {
+      console.log('Symbol already deleted')
+    }
   }
 
   function getStockData(symbol) {
@@ -208,6 +236,7 @@ $(document).ready(function() {
     x.domain(d3.extent(data, function(d) { return d.date; }));
     y.domain(d3.extent(data, function(d) { return d.close; }));
     
+    // draw axis only if first rendering
     if (first) {
       g.append("g")
         .attr("transform", "translate(0," + height + ")")
