@@ -87,7 +87,7 @@
 <script src="/socket.io/socket.io.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 <script src="https://d3js.org/d3.v4.min.js"></script>
-<script src="/js/keys.js"></script>
+<!-- <script src="/js/keys.js"></script> -->
 <script>
 // 516K67JS8ER6OPCG
 $(document).ready(function() {
@@ -154,7 +154,7 @@ $(document).ready(function() {
   function getStockData(symbol) {
     return $.ajax({
       type: 'GET',
-      url: 'https://www.alphavantage.co/query?function=TIME_SERIES_MONTHLY&symbol=' + symbol + '&apikey=' + api_key
+      url: 'https://www.alphavantage.co/query?function=TIME_SERIES_MONTHLY&symbol=' + symbol + '&apikey=516K67JS8ER6OPCG'
     });
   }
 
