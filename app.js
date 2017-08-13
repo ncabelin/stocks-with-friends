@@ -3,6 +3,7 @@ var app = express();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
 
+require('dotenv').config();
 app.use(express.static('static'));
 app.get('/', function(req, res) {
   res.sendFile(__dirname + '/index.html');
@@ -19,6 +20,6 @@ io.on('connection', function(socket) {
   });
 });
 
-http.listen(3000, function() {
-  console.log('listenting on :3000 fucker!');
+http.listen(process.env.PORT || 3000, process.env.IP, function() {
+  console.log('started server');
 });
