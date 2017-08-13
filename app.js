@@ -1,8 +1,9 @@
 var express = require('express');
-var app = express();
-var mongoose = require('mongoose');
-var http = require('http').Server(app);
-var io = require('socket.io')(http);
+    app = express(),
+    mongoose = require('mongoose'),
+    http = require('http').Server(app),
+    request = require('request'),
+    io = require('socket.io')(http);
 
 require('dotenv').config();
 mongoose.connect(process.env.MONGODB_URI);
@@ -11,9 +12,23 @@ var stockSchema = new mongoose.Schema({
 });
 var Stock = mongoose.model('Stock', stockSchema);
 
+app.set('view engine', 'ejs');
 app.use(express.static(__dirname + '/public'));
 app.get('/', function(req, res) {
-  res.send('/index.html');
+  res.render('index');
+});
+
+app.get('/get_stock', function(req, res) {
+  var url = 'https://www.alphavantage.co/query?function=TIME_SERIES_MONTHLY&symbol=' 
+    + req.query.q + '&apikey=' + process.env.API_KEY
+  request(url, function(error, response, body) {
+    if (error) {
+      res.status(400).json({message:'Error getting stock data'});
+    } else {
+      var b = JSON.parse(body);
+      res.status(200).json(b);
+    }
+  });
 });
 
 app.get('/list_stocks', function(req, res) {
