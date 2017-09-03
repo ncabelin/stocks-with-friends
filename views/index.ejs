@@ -3,6 +3,7 @@
   <title>Stocks with Friends</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css?family=Montserrat:800" rel="stylesheet">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
   <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css" rel="stylesheet">
   <style>
@@ -10,6 +11,20 @@
   body {
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizelegibility;
+    background-color: #f4f4f4;
+  }
+
+  h1 {
+    font-family: 'Montserrat', sans-serif;
+    color: #373737;
+  }
+
+  input {
+    height: 30px;
+  }
+
+  circle:hover {
+    cursor: pointer;
   }
 
   .stocks {
@@ -50,6 +65,7 @@
 
   .well {
     background-color: rgba(0,0,0,0.5);
+    color: white;
     padding: 5px;
     font-size: 16px;
   }
@@ -58,111 +74,26 @@
     cursor: pointer;
   }
 
-  @keyframes lds-spinner {
-    0% {
-      opacity: 1;
-    }
-    100% {
-      opacity: 0;
-    }
-  }
-  @-webkit-keyframes lds-spinner {
-    0% {
-      opacity: 1;
-    }
-    100% {
-      opacity: 0;
-    }
-  }
-  .lds-spinner {
-    position: relative;
-  }
-  .lds-spinner div {
-    left: 94px;
-    top: 23px;
-    position: absolute;
-    -webkit-animation: lds-spinner linear 1s infinite;
-    animation: lds-spinner linear 1s infinite;
-    background: #ffffff;
-    width: 12px;
-    height: 34px;
-    border-radius: 20%;
-    -webkit-transform-origin: 6px 77px;
-    transform-origin: 6px 77px;
-  }
-  .lds-spinner div:nth-child(1) {
-    -webkit-transform: rotate(0deg);
-    transform: rotate(0deg);
-    -webkit-animation-delay: -0.916666666666667s;
-    animation-delay: -0.916666666666667s;
-  }
-  .lds-spinner div:nth-child(2) {
-    -webkit-transform: rotate(30deg);
-    transform: rotate(30deg);
-    -webkit-animation-delay: -0.833333333333333s;
-    animation-delay: -0.833333333333333s;
-  }
-  .lds-spinner div:nth-child(3) {
-    -webkit-transform: rotate(60deg);
-    transform: rotate(60deg);
-    -webkit-animation-delay: -0.75s;
-    animation-delay: -0.75s;
-  }
-  .lds-spinner div:nth-child(4) {
-    -webkit-transform: rotate(90deg);
-    transform: rotate(90deg);
-    -webkit-animation-delay: -0.666666666666667s;
-    animation-delay: -0.666666666666667s;
-  }
-  .lds-spinner div:nth-child(5) {
-    -webkit-transform: rotate(120deg);
-    transform: rotate(120deg);
-    -webkit-animation-delay: -0.583333333333333s;
-    animation-delay: -0.583333333333333s;
-  }
-  .lds-spinner div:nth-child(6) {
-    -webkit-transform: rotate(150deg);
-    transform: rotate(150deg);
-    -webkit-animation-delay: -0.5s;
-    animation-delay: -0.5s;
-  }
-  .lds-spinner div:nth-child(7) {
-    -webkit-transform: rotate(180deg);
-    transform: rotate(180deg);
-    -webkit-animation-delay: -0.416666666666667s;
-    animation-delay: -0.416666666666667s;
-  }
-  .lds-spinner div:nth-child(8) {
-    -webkit-transform: rotate(210deg);
-    transform: rotate(210deg);
-    -webkit-animation-delay: -0.333333333333333s;
-    animation-delay: -0.333333333333333s;
-  }
-  .lds-spinner div:nth-child(9) {
-    -webkit-transform: rotate(240deg);
-    transform: rotate(240deg);
-    -webkit-animation-delay: -0.25s;
-    animation-delay: -0.25s;
-  }
-  .lds-spinner div:nth-child(10) {
-    -webkit-transform: rotate(270deg);
-    transform: rotate(270deg);
-    -webkit-animation-delay: -0.166666666666667s;
-    animation-delay: -0.166666666666667s;
-  }
-  .lds-spinner div:nth-child(11) {
-    -webkit-transform: rotate(300deg);
-    transform: rotate(300deg);
-    -webkit-animation-delay: -0.083333333333333s;
-    animation-delay: -0.083333333333333s;
-  }
-  .lds-spinner div:nth-child(12) {
-    -webkit-transform: rotate(330deg);
-    transform: rotate(330deg);
-    -webkit-animation-delay: 0s;
-    animation-delay: 0s;
+  .centered {
+    right: 50%;
+    top: 50%;
+    position: fixed;
+
   }
 
+  .loader {
+    border: 16px solid #f3f3f3; /* Light grey */
+    border-top: 16px solid #3498db; /* Blue */
+    border-radius: 50%;
+    width: 120px;
+    height: 120px;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
   </style>
 </head>
 
@@ -171,7 +102,6 @@
     <div class="row">
       <div class="col-md-12">
         <h1 class="text-center">Stocks With Friends</h1>
-        <div class="lds-spinner"></div>
       </div>
     </div>
     <div class="row">
@@ -188,6 +118,9 @@
       <div class="col-md-12">
           <div id="stock-panel"></div>
         </div>
+    </div>
+    <div class="centered">
+      <div class="loader"></div>
     </div>
     <div class="row">
       <svg width="960" height="500"></svg>
@@ -213,7 +146,7 @@ $(document).ready(function() {
     removeStock(stck);
   });
 
-  var colors = ['steelblue','red','orange', 'yellow', 'green', 'purple', 'black', 'violet', 'brown', 'pink'],
+  var colors = ['steelblue','red','orange', '#cfcf2a', 'green', 'purple', 'black', 'violet', 'brown', 'pink'],
       symbols = [],
       first = true,
       stock_data = [];
@@ -223,7 +156,7 @@ $(document).ready(function() {
     type: 'GET',
     url: '/list_stocks'
   }).done(function(result) {
-    result.forEach(function(s) {
+    result.forEach(function(s, i) {
       addStock(s.name);
     });
   }).fail(function(err) {
@@ -239,6 +172,7 @@ $(document).ready(function() {
   });
 
   function addStock(sym) {
+    $('.loader').show();
     var color;
 
     // empty input
@@ -266,14 +200,7 @@ $(document).ready(function() {
         socket.emit('remove stock', symbol);
       });
 
-      $('.show-data').off();
-      $('.show-data').click(function() {
-        var symbol = $(this).data('id');
-        followLine(symbol);
-      });
-
       var converted = convertStocks(result);
-      console.log(converted);
       renderChart(converted, color, first, sym);
       first = false;
     }).fail(function(err) {
@@ -287,6 +214,7 @@ $(document).ready(function() {
     if (symbol_index !== -1) {
       // remove line
       d3.select('#' + symbol).remove();
+      d3.selectAll('.' + symbol).remove();
       // remove DOM element
       $('span[data-id="' + symbol + '"]').remove();
       // remove from symbols array
@@ -318,7 +246,20 @@ $(document).ready(function() {
     return arr
   }
 
+  function renderDate(date) {
+    var monthNames = ["January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+    var d = new Date(date);
+    return monthNames[d.getMonth()] + ', ' + d.getFullYear();
+  }
+
   function renderChart(data, c, first, symbol) {
+
+    var div = d3.select(".container").append("div")
+              .attr("class", "tooltip")
+              .style("opacity", 0);
+
     var svg = d3.select("svg"),
     margin = {top: 20, right: 20, bottom: 50, left: 50},
     width = +svg.attr("width") - margin.left - margin.right,
@@ -379,18 +320,26 @@ $(document).ready(function() {
         })
       .append("text");
 
-  } // end of renderChart()
+    g.selectAll('dot')
+      .data(data)
+    .enter().append('circle')
+      .attr('class', symbol)
+      .attr('r', 2)
+      .attr('cx', function(d) { return x(d.date); } )
+      .attr('cy', function(d) { return y(d.close); } )
+      .on("mouseover", function(d, i) {
+            div.transition().duration(100).style("opacity", 1);
+            div.html("<div class='well'><p><strong>Stock : </strong> " + symbol + "<br><strong>Date : </strong>" + renderDate(data[i].date) + "<br><strong>Close : </strong>$" + data[i].close +
+              "</div>")
+            .style("left", (d3.event.pageX) + "px")
+            .style("top", (d3.event.pageY + 30) + "px");
+          })
+          .on("mouseout", function(d, i) {
+            div.html("");
+          });
 
-  // creates an element to follow the line of path of a symbol
-  function followLine(symbol) {
-    console.log(symbol);
-    var svg = d3.select("#" + symbol);
-    svg.on('mousemove', function() {
-      var m = d3.mouse(this)
-      console.log(m);
-      $("#show").text(m[1]);
-    })
-  }
+      $('.loader').hide();
+  } // end of renderChart()
 });
 
 </script>
