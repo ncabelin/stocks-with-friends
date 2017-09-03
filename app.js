@@ -18,6 +18,7 @@ app.get('/', function(req, res) {
   res.render('index');
 });
 
+// get monthly stock data from alphavantage
 app.get('/get_stock', function(req, res) {
   var url = 'https://www.alphavantage.co/query?function=TIME_SERIES_MONTHLY&symbol=' 
     + req.query.q + '&apikey=' + process.env.API_KEY
@@ -31,6 +32,7 @@ app.get('/get_stock', function(req, res) {
   });
 });
 
+// get array of stocks currently listed
 app.get('/list_stocks', function(req, res) {
   Stock.find({}, function(err, stocks) {
     if (err) {
