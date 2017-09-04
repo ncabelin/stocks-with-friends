@@ -79,7 +79,7 @@
 
   .centered {
     right: 50%;
-    top: 50%;
+    top: 20%;
     position: fixed;
 
   }
@@ -140,8 +140,7 @@
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script>
 $(document).ready(function() {
-  var socket = io(),
-      count = 0;
+  var socket = io(), stock_length;
   socket.on('add stock', function(stck) {
     addStock(stck);
   });
@@ -160,9 +159,9 @@ $(document).ready(function() {
     type: 'GET',
     url: '/list_stocks'
   }).done(function(result) {
+    stock_length = result.length;
     result.forEach(function(s, i) {
-      addStock(s.name);
-      count++;
+      addStock(s.name, stock_length);
     });
   }).fail(function(err) {
     console.log(err);
@@ -202,6 +201,7 @@ $(document).ready(function() {
     }
 
     getStockData(sym).done(function(result) {
+      console.log(result);
       $('#stock-panel').append('<span class="stocks" data-id="' + sym + '"><strong><span class="show-data">' + sym + '</span></strong> &nbsp;&nbsp; <i class="fa fa-trash" data-id="' + sym + '"></i></span>');
       $('span[data-id=' + sym + ']')
         .css('color', color)
@@ -221,8 +221,25 @@ $(document).ready(function() {
         socket.emit('remove stock', symbol);
       });
 
-      var converted = convertStocks(result);
-      renderChart(converted, color, first, sym);
+      var converted_data = convertStocks(result);
+      stock_data.push({ name: sym, data: converted_data});
+      if (stock_length == stock_data.length) {
+        console.log('Finished');
+        $('.loader').hide();
+      }
+
+      stock_data.forEach(function(res) {
+        var dates = [];
+        res.data.forEach(function(x) {
+          dates.push(x.date);
+        });
+        var min = dates.reduce(function (a, b) { return a < b ? a : b; });
+        var max = dates.reduce(function (a, b) { return a > b ? a : b; });
+        // console.log(min, res.name);
+      })
+
+      console.log(converted_data);
+      renderChart(converted_data, color, first, sym);
       first = false;
     }).fail(function(err) {
       alert('Failed to get data');
@@ -255,17 +272,29 @@ $(document).ready(function() {
 
   function convertStocks(obj) {
     // convert object data to array of date and close
-    var data = obj['Monthly Time Series'];
+    var data = obj['Weekly Time Series'];
     var arr = [];
+    var previous_date = new Date();
+    previous_date.setMonth(previous_date.getMonth() - 12);
     for (k in data) {
       if (data.hasOwnProperty(k)) {
-        arr.push({
-          date: k,
-          close: data[k]['4. close']
-        });
+        // console.log(k)
+        var d_arr = k.split('-');
+        date = new Date(d_arr[1] + '/' + d_arr[2] + '/' + d_arr[0]);
+        // console.log(date);
+        if (date > previous_date) {
+          arr.push({
+            date: date,
+            close: data[k]['4. close']
+          });
+        }
       }
     }
-    return arr
+
+    arr.sort(function(a,b){
+      return new Date(b.date) - new Date(a.date);
+    });
+    return arr;
   }
 
   function renderDate(date) {
@@ -273,11 +302,13 @@ $(document).ready(function() {
       "July", "August", "September", "October", "November", "December"
     ];
     var d = new Date(date);
-    return monthNames[d.getMonth()] + ', ' + d.getFullYear();
+    // console.log(date);
+    // console.log(d.getDay());
+    return monthNames[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
   }
 
   function renderChart(data, color, first, symbol) {
-
+    console.log(data);
     var div = d3.select(".container").append("div")
               .attr("class", "tooltip")
               .style("opacity", 0);
@@ -286,7 +317,6 @@ $(document).ready(function() {
     margin = {top: 20, right: 20, bottom: 50, left: 50},
     width = +svg.attr("width") - margin.left - margin.right,
     height = +svg.attr("height") - margin.top - margin.bottom,
-    bisectDate = d3.bisector(function(d) { return d.date; }).left,
     g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
     var x = d3.scaleTime()
@@ -302,8 +332,6 @@ $(document).ready(function() {
           return y(d.close); });
 
     data.forEach(function(d) {
-        var d_arr = d.date.split('-');
-        d.date = new Date(d_arr[1] + '/' + d_arr[2] + '/' + d_arr[0]);
         d.close = +d.close;
     });
 
@@ -346,7 +374,7 @@ $(document).ready(function() {
     .enter().append('circle')
       .attr('class', symbol + ' dots')
       .attr('fill', color)
-      .attr('r', 2)
+      .attr('r', 3)
       .attr('cx', function(d) { return x(d.date); } )
       .attr('cy', function(d) { return y(d.close); } )
       .on("mouseover", function(d, i) {

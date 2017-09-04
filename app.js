@@ -20,7 +20,7 @@ app.get('/', function(req, res) {
 
 // get monthly stock data from alphavantage
 app.get('/get_stock', function(req, res) {
-  var url = 'https://www.alphavantage.co/query?function=TIME_SERIES_MONTHLY&symbol=' 
+  var url = 'https://www.alphavantage.co/query?function=TIME_SERIES_WEEKLY&symbol=' 
     + req.query.q + '&apikey=' + process.env.API_KEY
   request(url, function(error, response, body) {
     if (error) {
