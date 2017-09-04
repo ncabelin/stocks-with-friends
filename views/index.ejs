@@ -7,7 +7,6 @@
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
   <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css" rel="stylesheet">
   <style>
-
   body {
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizelegibility;
@@ -27,11 +26,15 @@
     cursor: pointer;
   }
 
-  .stocks {
+  .stocks, #show_all {
     padding: 10px 15px;
     margin: 5px;
     border: 1px solid black;
     display: inline-block;
+  }
+
+  #show_all:hover {
+    cursor: pointer;
   }
 
   .show-data:hover {
@@ -137,7 +140,8 @@
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script>
 $(document).ready(function() {
-  var socket = io();
+  var socket = io(),
+      count = 0;
   socket.on('add stock', function(stck) {
     addStock(stck);
   });
@@ -158,6 +162,7 @@ $(document).ready(function() {
   }).done(function(result) {
     result.forEach(function(s, i) {
       addStock(s.name);
+      count++;
     });
   }).fail(function(err) {
     console.log(err);
@@ -171,11 +176,18 @@ $(document).ready(function() {
     socket.emit('add stock', sym);
   });
 
+  $('#stock-panel').append('<span id="show_all"><strong>Show All</strong></span>');
+  $('#show_all').click(function() {
+      d3.selectAll('.lines').style('opacity','1');
+      d3.selectAll('.dots').style('opacity','1');
+      $(this).hide();
+  }).hide();
+
   function addStock(sym) {
     $('.loader').show();
     var color;
 
-    // empty input
+    // clear input
     $('#symbol-input').val('');
 
     // check if symbol already exists
@@ -190,8 +202,17 @@ $(document).ready(function() {
     }
 
     getStockData(sym).done(function(result) {
-      $('#stock-panel').append('<span class="stocks" data-id="' + sym + '"><strong><span class="show-data" data-id="' + sym + '">' + sym + '</span></strong> &nbsp;&nbsp; <i class="fa fa-trash" data-id="' + sym + '"></i></span>');
-      $('span[data-id=' + sym + ']').css('color', color);
+      $('#stock-panel').append('<span class="stocks" data-id="' + sym + '"><strong><span class="show-data">' + sym + '</span></strong> &nbsp;&nbsp; <i class="fa fa-trash" data-id="' + sym + '"></i></span>');
+      $('span[data-id=' + sym + ']')
+        .css('color', color)
+        .css('border', '1px solid ' + color)
+        .click(function() {
+          d3.selectAll('.lines').style('opacity','0');
+          d3.selectAll('.dots').style('opacity','0');
+          d3.select('#' + sym).style('opacity','1');
+          d3.selectAll('.' + sym).style('opacity','1');
+          $('#show_all').show();
+        });
 
       $('.fa-trash').off()
       $('.fa-trash').click(function() {
@@ -214,6 +235,7 @@ $(document).ready(function() {
     if (symbol_index !== -1) {
       // remove line
       d3.select('#' + symbol).remove();
+      // remove scatterplots
       d3.selectAll('.' + symbol).remove();
       // remove DOM element
       $('span[data-id="' + symbol + '"]').remove();
@@ -254,7 +276,7 @@ $(document).ready(function() {
     return monthNames[d.getMonth()] + ', ' + d.getFullYear();
   }
 
-  function renderChart(data, c, first, symbol) {
+  function renderChart(data, color, first, symbol) {
 
     var div = d3.select(".container").append("div")
               .attr("class", "tooltip")
@@ -305,25 +327,25 @@ $(document).ready(function() {
           .text("Price ($)");
     }
 
+    // draw line
     g.append("path")
         .datum(data)
         .attr("id", symbol)
+        .attr("class", "lines")
         .attr("fill", "none")
-        .attr("stroke", c)
+        .attr("stroke", color)
         .attr("stroke-linejoin", "round")
         .attr("stroke-linecap", "round")
         .attr("stroke-width", 1.5)
         .attr("d", line)
-        .on("mousemove", function() {
-          var m = d3.mouse(this)
-          console.log(m);
-        })
       .append("text");
 
+    // draw dots
     g.selectAll('dot')
       .data(data)
     .enter().append('circle')
-      .attr('class', symbol)
+      .attr('class', symbol + ' dots')
+      .attr('fill', color)
       .attr('r', 2)
       .attr('cx', function(d) { return x(d.date); } )
       .attr('cy', function(d) { return y(d.close); } )
