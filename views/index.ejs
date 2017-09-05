@@ -26,6 +26,10 @@
     cursor: pointer;
   }
 
+  #symbol-input {
+    padding: 10px;
+  }
+
   .stocks, #show_all {
     padding: 10px 15px;
     margin: 5px;
@@ -35,6 +39,12 @@
 
   #show_all:hover {
     cursor: pointer;
+  }
+
+  #chat-box {
+    height: 100px;
+    border: 1px solid gray;
+    padding: 5px;
   }
 
   .show-data:hover {
@@ -85,7 +95,7 @@
   }
 
   .loader {
-    border: 16px solid #f3f3f3; /* Light grey */
+    border: 16px solid rgba(0,0,0,0); /* Transparent */
     border-top: 16px solid #3498db; /* Blue */
     border-radius: 50%;
     width: 120px;
@@ -109,16 +119,21 @@
     </div>
     <div class="row">
       <div class="col-md-6">
-        <span class="lead pull-right">Enter Stock Symbol : e.g. AAPL (Apple)</span>
+        <span class="lead pull-right">Visualize 12 months of stock performance</span>
       </div>
       <div class="col-md-6">
         <span id="show"></span>
         <form id="symbol" style="display:inline;">
-          <input name="symbol" type="text" id="symbol-input">
+          <input name="symbol" type="text" id="symbol-input" placeholder="Enter Stock Symbol">
           <input type="submit" value="Go" class="btn btn-default">
         </form>
       </div>
-      <div class="col-md-12">
+      <!-- <div class="col-md-4">
+        <div id="chat-box">
+        </div>
+        <input id="chat">
+      </div> -->
+      <div class="col-md-8">
           <div id="stock-panel"></div>
         </div>
     </div>
@@ -130,8 +145,8 @@
     </div>
     <div class="row">
       <div class="col-md-12">
-        <span><strong>Project by :</strong> by <a href="https://mike.cabelin.com">Neptune Michael Cabelin</a> ---
-        <strong>Github repository found at : </strong><a href="https://github.com/ncabelin/stocks-with-friends.git">https://github.com/ncabelin/stocks-with-friends.git</a></span>
+        <span>Syncs in realtime with other users of the web app - &copy; 2017 Cabelin Software Solutions (
+        <strong>Github repository found at : </strong><a href="https://github.com/ncabelin/stocks-with-friends.git">https://github.com/ncabelin/stocks-with-friends.git</a> )</span>
       </div>
     </div>
   </div>
@@ -176,13 +191,6 @@ $(document).ready(function() {
     socket.emit('add stock', sym);
   });
 
-  $('#stock-panel').append('<span id="show_all"><strong>Show All</strong></span>');
-  $('#show_all').click(function() {
-      d3.selectAll('.lines').style('opacity','1');
-      d3.selectAll('.dots').style('opacity','1');
-      $(this).hide();
-  }).hide();
-
   function addStock(sym) {
     $('.loader').show();
     var color;
@@ -226,19 +234,24 @@ $(document).ready(function() {
       stock_data.push({ name: sym, data: converted_data});
       if (stock_length == stock_data.length) {
         console.log('Finished');
+        // add show all button
+        $('#stock-panel').append('<span id="show_all"><strong>Show All</strong></span>');
+        $('#show_all').click(function() {
+            d3.selectAll('.lines').style('opacity','1');
+            d3.selectAll('.dots').style('opacity','1');
+            $(this).hide();
+        }).hide();
         $('.loader').hide();
       }
 
-      var min_close, max_close, min_date;
+      var min_close, max_close;
       stock_data.forEach(function(res) {
-        var dates = [], closes = [];
+        var closes = [];
         res.data.forEach(function(x) {
-          dates.push(x.date);
           closes.push(x.close);
         });
-        min_date = dates.reduce(function (a, b) { return a < b ? a : b; });
-        min_close = closes.reduce(function (a, b) { return a < b ? a : b; });
-        max_close = closes.reduce(function (a, b) { return a > b ? a : b; });
+        min_close = Math.min.apply(null, closes);
+        max_close = Math.max.apply(null, closes);
       })
 
       var options = {
@@ -246,7 +259,6 @@ $(document).ready(function() {
         color: color,
         first: first,
         symbol: sym,
-        min_date: min_date,
         min_close: min_close,
         max_close: max_close
       }
@@ -327,7 +339,9 @@ $(document).ready(function() {
 
     // calculate percent change from lowest it has been within a year to highest
     data.forEach(function(d) {
-        d.percent_change = Math.floor(((d.close - min_close)/(max_close - min_close)) * 100);
+        d.percent_change = Math.floor(((+d.close - min_close)/(max_close - min_close)) * 100);
+        d.min_close = min_close;
+        d.max_close = max_close;
         d.close = +d.close;
     });
 
@@ -397,8 +411,8 @@ $(document).ready(function() {
       .attr('cy', function(d) { return y(d.percent_change); } )
       .on("mouseover", function(d, i) {
             div.transition().duration(100).style("opacity", 1);
-            div.html("<div class='well'><p><strong>Stock : </strong> " + symbol + "<br><strong>Date : </strong>" + renderDate(data[i].date) + "<br><strong>Close : </strong>$" + data[i].close + '<br><strong>% change: </strong>' + data[i].percent_change + ' %' +
-              "</div>")
+            div.html("<div class='well'><p><strong>Stock: </strong> " + symbol + "<br><strong>Date: </strong>" + renderDate(data[i].date) + "<br><strong>Close: </strong>$" + data[i].close + '<br><strong>Min: </strong>$' +
+              + data[i].min_close + "<br><strong>Max: </strong>$" + data[i].max_close + "<br><strong>% in range: </strong>" + data[i].percent_change + "%</div>")
             .style("left", (d3.event.pageX) + "px")
             .style("top", (d3.event.pageY + 30) + "px");
           })
@@ -406,7 +420,6 @@ $(document).ready(function() {
             div.html("");
           });
 
-      $('.loader').hide();
   } // end of renderChart()
 });
 
