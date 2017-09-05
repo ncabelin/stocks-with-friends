@@ -140,7 +140,8 @@
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script>
 $(document).ready(function() {
-  var socket = io(), stock_length;
+  var socket = io(),
+      stock_length;
   socket.on('add stock', function(stck) {
     addStock(stck);
   });
@@ -201,7 +202,7 @@ $(document).ready(function() {
     }
 
     getStockData(sym).done(function(result) {
-      console.log(result);
+      // create button
       $('#stock-panel').append('<span class="stocks" data-id="' + sym + '"><strong><span class="show-data">' + sym + '</span></strong> &nbsp;&nbsp; <i class="fa fa-trash" data-id="' + sym + '"></i></span>');
       $('span[data-id=' + sym + ']')
         .css('color', color)
@@ -228,18 +229,28 @@ $(document).ready(function() {
         $('.loader').hide();
       }
 
+      var min_close, max_close, min_date;
       stock_data.forEach(function(res) {
-        var dates = [];
+        var dates = [], closes = [];
         res.data.forEach(function(x) {
           dates.push(x.date);
+          closes.push(x.close);
         });
-        var min = dates.reduce(function (a, b) { return a < b ? a : b; });
-        var max = dates.reduce(function (a, b) { return a > b ? a : b; });
-        // console.log(min, res.name);
+        min_date = dates.reduce(function (a, b) { return a < b ? a : b; });
+        min_close = closes.reduce(function (a, b) { return a < b ? a : b; });
+        max_close = closes.reduce(function (a, b) { return a > b ? a : b; });
       })
 
-      console.log(converted_data);
-      renderChart(converted_data, color, first, sym);
+      var options = {
+        data: converted_data,
+        color: color,
+        first: first,
+        symbol: sym,
+        min_date: min_date,
+        min_close: min_close,
+        max_close: max_close
+      }
+      renderChart(options);
       first = false;
     }).fail(function(err) {
       alert('Failed to get data');
@@ -274,14 +285,14 @@ $(document).ready(function() {
     // convert object data to array of date and close
     var data = obj['Weekly Time Series'];
     var arr = [];
+    // set one year ago
     var previous_date = new Date();
     previous_date.setMonth(previous_date.getMonth() - 12);
     for (k in data) {
       if (data.hasOwnProperty(k)) {
-        // console.log(k)
         var d_arr = k.split('-');
         date = new Date(d_arr[1] + '/' + d_arr[2] + '/' + d_arr[0]);
-        // console.log(date);
+        // only push if within one year
         if (date > previous_date) {
           arr.push({
             date: date,
@@ -291,6 +302,7 @@ $(document).ready(function() {
       }
     }
 
+    // sort data by date
     arr.sort(function(a,b){
       return new Date(b.date) - new Date(a.date);
     });
@@ -302,13 +314,23 @@ $(document).ready(function() {
       "July", "August", "September", "October", "November", "December"
     ];
     var d = new Date(date);
-    // console.log(date);
-    // console.log(d.getDay());
     return monthNames[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
   }
 
-  function renderChart(data, color, first, symbol) {
-    console.log(data);
+  function renderChart(options) {
+    var data = options.data,
+        color = options.color,
+        first = options.first,
+        symbol = options.symbol,
+        min_close = options.min_close,
+        max_close = options.max_close;
+
+    // calculate percent change from lowest it has been within a year to highest
+    data.forEach(function(d) {
+        d.percent_change = Math.floor(((d.close - min_close)/(max_close - min_close)) * 100);
+        d.close = +d.close;
+    });
+
     var div = d3.select(".container").append("div")
               .attr("class", "tooltip")
               .style("opacity", 0);
@@ -329,14 +351,10 @@ $(document).ready(function() {
         .x(function(d) {
           return x(d.date); })
         .y(function(d) {
-          return y(d.close); });
-
-    data.forEach(function(d) {
-        d.close = +d.close;
-    });
+          return y(d.percent_change); });
 
     x.domain(d3.extent(data, function(d) { return d.date; }));
-    y.domain(d3.extent(data, function(d) { return d.close; }));
+    y.domain(d3.extent(data, function(d) { return d.percent_change; }));
 
     // draw axis only if first rendering
     if (first) {
@@ -352,7 +370,7 @@ $(document).ready(function() {
           .attr("y", 6)
           .attr("dy", "0.71em")
           .attr("text-anchor", "end")
-          .text("Price ($)");
+          .text("Percent (%)");
     }
 
     // draw line
@@ -376,10 +394,10 @@ $(document).ready(function() {
       .attr('fill', color)
       .attr('r', 3)
       .attr('cx', function(d) { return x(d.date); } )
-      .attr('cy', function(d) { return y(d.close); } )
+      .attr('cy', function(d) { return y(d.percent_change); } )
       .on("mouseover", function(d, i) {
             div.transition().duration(100).style("opacity", 1);
-            div.html("<div class='well'><p><strong>Stock : </strong> " + symbol + "<br><strong>Date : </strong>" + renderDate(data[i].date) + "<br><strong>Close : </strong>$" + data[i].close +
+            div.html("<div class='well'><p><strong>Stock : </strong> " + symbol + "<br><strong>Date : </strong>" + renderDate(data[i].date) + "<br><strong>Close : </strong>$" + data[i].close + '<br><strong>% change: </strong>' + data[i].percent_change + ' %' +
               "</div>")
             .style("left", (d3.event.pageX) + "px")
             .style("top", (d3.event.pageY + 30) + "px");
