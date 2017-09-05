@@ -119,7 +119,7 @@
     </div>
     <div class="row">
       <div class="col-md-6">
-        <span class="lead pull-right">Visualize 12 months of stock performance</span>
+        <span class="lead pull-right">Visualize 12 months of stock performance trends</span>
       </div>
       <div class="col-md-6">
         <span id="show"></span>
@@ -420,6 +420,7 @@ $(document).ready(function() {
             div.html("");
           });
 
+      $('.loader').hide();
   } // end of renderChart()
 });
 
